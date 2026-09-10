@@ -22,6 +22,10 @@ const repoRoot = __dirname;
 const claudeDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
 const skillDest = path.join(claudeDir, 'skills', 'one-sentence');
 const hookDest = path.join(claudeDir, 'hooks', 'one-sentence.js');
+// `/1s` is not resolvable on its own: the harness matches slash commands to
+// skill names, so without this file the short form errors with
+// "command not found" and the prompt never reaches the model.
+const commandDest = path.join(claudeDir, 'commands', '1s.md');
 const settingsPath = path.join(claudeDir, 'settings.json');
 
 // Forward slashes in the registered command on every platform: the hook string
@@ -76,6 +80,7 @@ function doInstall() {
   log('Installing one-sentence into ' + claudeDir);
   copyFile(path.join(repoRoot, 'skills', 'one-sentence', 'SKILL.md'), path.join(skillDest, 'SKILL.md'));
   copyFile(path.join(repoRoot, 'hooks', 'one-sentence.js'), hookDest);
+  copyFile(path.join(repoRoot, 'commands', '1s.md'), commandDest);
 
   const settings = readSettings();
   const hooks = settings.hooks || (settings.hooks = {});
@@ -113,9 +118,10 @@ function doUninstall() {
     if (kept.length === 0) delete settings.hooks.UserPromptSubmit;
     writeSettings(settings, 'unregistered UserPromptSubmit hook in settings.json');
   }
-  if (fs.existsSync(hookDest)) {
-    if (dryRun) log('  would delete ' + hookDest);
-    else { fs.unlinkSync(hookDest); log('  deleted     ' + hookDest); }
+  for (const target of [hookDest, commandDest]) {
+    if (!fs.existsSync(target)) continue;
+    if (dryRun) log('  would delete ' + target);
+    else { fs.unlinkSync(target); log('  deleted     ' + target); }
   }
   // The skill folder is left in place deliberately: removing the enforcement
   // is a much smaller decision than deleting a skill the user may have edited.

@@ -40,6 +40,8 @@ Restart Claude Code afterwards — hooks load at startup.
 
 `/one-sentence` or `/1s` to start. `/1s off` or "normal mode" to stop.
 
+`/1s` needs `commands/1s.md` on disk — the installer puts it there, because the harness matches slash commands to skill names and would otherwise answer `/1s` with "command not found".
+
 On its own it compresses your *last* reply; attached to a question it answers in one sentence. It also self-triggers on "be brief", "too long", "tl;dr".
 
 Say "explain" or "in detail" for a full answer — it returns to one sentence next turn.
