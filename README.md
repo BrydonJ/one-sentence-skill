@@ -50,7 +50,9 @@ Say "explain" or "in detail" for a full answer — it returns to one sentence ne
 
 `SKILL.md` is injected once. Nothing re-asserts it, so the model drifts back to paragraphs within a few turns — the exact thing you installed it to prevent.
 
-`hooks/one-sentence.js` re-injects the rule on every prompt while the mode is on. That is the whole fix.
+`hooks/one-sentence.js` re-injects the rule on every prompt while the mode is on.
+
+`hooks/one-sentence-stop.js` is the gate. A reminder injected at prompt-submit still loses on the last message of a long agentic run, thousands of tokens and dozens of tool calls later, where the wrap-up instinct is strongest. The `Stop` hook reads the finished reply and sends it back once if the prose runs over — lists, code, and output do not count, and an explicit "explain" is exempt.
 
 ## Rules it holds to
 

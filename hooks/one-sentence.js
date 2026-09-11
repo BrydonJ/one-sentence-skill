@@ -136,6 +136,26 @@ function sweepOldState() {
   }
 }
 
+// The Stop hook needs to know that THIS turn was an explicit detail request,
+// or it would block the long answer the user just asked for. A file is the only
+// channel between the two hooks.
+function setExpandMarker(sessionId) {
+  try {
+    fs.mkdirSync(stateDir, { recursive: true });
+    fs.writeFileSync(path.join(stateDir, (sessionId || 'default') + '.expand'), '1', 'utf8');
+  } catch (e) {
+    // Worst case the Stop hook blocks a reply that was allowed to be long.
+  }
+}
+
+function clearExpandMarker(sessionId) {
+  try {
+    fs.unlinkSync(path.join(stateDir, (sessionId || 'default') + '.expand'));
+  } catch (e) {
+    // Not present is the normal case.
+  }
+}
+
 function matchesAny(patterns, text) {
   return patterns.some((re) => re.test(text));
 }
@@ -171,8 +191,10 @@ function handle(raw) {
 
     const parts = [];
     if (matchesAny(EXPAND_PHRASES, prompt)) {
+      setExpandMarker(sessionId);
       parts.push(EXPAND_NOTICE);
     } else {
+      clearExpandMarker(sessionId);
       if (bareTrigger) parts.push(COMPRESS_NOTICE);
       parts.push(REINFORCEMENT);
     }

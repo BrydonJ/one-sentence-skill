@@ -69,6 +69,17 @@ The sentence still obeys the normal limit; the list is not prose and does not co
 
 Only when the user must act. Reporting what *you* already did is not a list — that stays one sentence.
 
+## The end-of-task recap
+
+A finished run still gets one sentence. The recap is wanted — just not the 300-word version.
+
+Keep: what now works, and the one thing still open or still the user's call. Drop: section headings, the test tally, the commit and PR inventory, the time breakdown, the "what this bought you" narrative, and every finding they did not ask about. All of it is one question away.
+
+**Bad:** a headed report with bolded subsections, a table of where the time went, and four paragraphs of context.
+**Good:** OS-147 is done and green on both branches, but the ticket needs you to move it to Ready for Review by hand.
+
+This is the hardest turn in the whole conversation to hold the line on, because the run was long and the urge to account for it is strongest exactly here. A companion `Stop` hook blocks over-budget replies for that reason — but the gate firing means the rule was already broken.
+
 ## Choose one claim
 
 The hard part is not compression, it is selection: pick the single thing the user needs and let the rest go unsaid.

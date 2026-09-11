@@ -26,12 +26,17 @@ const hookDest = path.join(claudeDir, 'hooks', 'one-sentence.js');
 // skill names, so without this file the short form errors with
 // "command not found" and the prompt never reaches the model.
 const commandDest = path.join(claudeDir, 'commands', '1s.md');
+// The prompt hook reminds; this one enforces. Without it a long agentic run
+// still ends in a wall of text, because the reminder was injected thousands of
+// tokens earlier and lost to the task's own reporting instinct.
+const stopHookDest = path.join(claudeDir, 'hooks', 'one-sentence-stop.js');
 const settingsPath = path.join(claudeDir, 'settings.json');
 
 // Forward slashes in the registered command on every platform: the hook string
 // is embedded in JSON, and a Windows backslash path has to be double-escaped
 // there, which is a reliable source of silently broken hook registrations.
 const hookCommand = 'node "' + hookDest.replace(/\\/g, '/') + '"';
+const stopHookCommand = 'node "' + stopHookDest.replace(/\\/g, '/') + '"';
 
 function log(msg) {
   process.stdout.write(msg + '\n');
@@ -73,33 +78,40 @@ function writeSettings(settings, what) {
 // re-run after a path change still recognises its own previous entry instead of
 // adding a second one that fires alongside the first.
 function isOurs(entry) {
-  return JSON.stringify(entry).includes('one-sentence.js');
+  return /one-sentence(?:-stop)?\.js/.test(JSON.stringify(entry));
+}
+
+// Both events take the same shape, and registering them through one function
+// keeps a change to the timeout or status message from applying to only one.
+function register(hooks, event, command, statusMessage) {
+  const list = hooks[event] || (hooks[event] = []);
+  const entry = {
+    hooks: [{
+      type: 'command',
+      command,
+      // Generous because Windows process startup with antivirus in the path is
+      // an order of magnitude slower than the ~50ms of real work here.
+      timeout: 15,
+      statusMessage,
+    }],
+  };
+  const existing = list.findIndex(isOurs);
+  if (existing === -1) list.push(entry);
+  else list[existing] = entry;
 }
 
 function doInstall() {
   log('Installing one-sentence into ' + claudeDir);
   copyFile(path.join(repoRoot, 'skills', 'one-sentence', 'SKILL.md'), path.join(skillDest, 'SKILL.md'));
   copyFile(path.join(repoRoot, 'hooks', 'one-sentence.js'), hookDest);
+  copyFile(path.join(repoRoot, 'hooks', 'one-sentence-stop.js'), stopHookDest);
   copyFile(path.join(repoRoot, 'commands', '1s.md'), commandDest);
 
   const settings = readSettings();
   const hooks = settings.hooks || (settings.hooks = {});
-  const ups = hooks.UserPromptSubmit || (hooks.UserPromptSubmit = []);
-  const existing = ups.findIndex(isOurs);
-  const entry = {
-    hooks: [{
-      type: 'command',
-      command: hookCommand,
-      // Generous because Windows process startup with antivirus in the path is
-      // an order of magnitude slower than the ~50ms of real work here.
-      timeout: 15,
-      statusMessage: 'one-sentence check...',
-    }],
-  };
-
-  if (existing === -1) ups.push(entry);
-  else ups[existing] = entry;
-  writeSettings(settings, 'registered  UserPromptSubmit hook in settings.json');
+  register(hooks, 'UserPromptSubmit', hookCommand, 'one-sentence check...');
+  register(hooks, 'Stop', stopHookCommand, 'one-sentence length check...');
+  writeSettings(settings, 'registered  UserPromptSubmit and Stop hooks in settings.json');
 
   log('');
   log('Done. Restart Claude Code — hooks are read at startup, so the hook will');
@@ -109,16 +121,18 @@ function doInstall() {
 function doUninstall() {
   log('Removing one-sentence hook from ' + claudeDir);
   const settings = readSettings();
-  const ups = (settings.hooks && settings.hooks.UserPromptSubmit) || [];
-  const kept = ups.filter((e) => !isOurs(e));
-  if (kept.length === ups.length) {
-    log('  no hook registration found');
-  } else {
-    settings.hooks.UserPromptSubmit = kept;
-    if (kept.length === 0) delete settings.hooks.UserPromptSubmit;
-    writeSettings(settings, 'unregistered UserPromptSubmit hook in settings.json');
+  let removed = false;
+  for (const event of ['UserPromptSubmit', 'Stop']) {
+    const list = (settings.hooks && settings.hooks[event]) || [];
+    const kept = list.filter((e) => !isOurs(e));
+    if (kept.length === list.length) continue;
+    settings.hooks[event] = kept;
+    if (kept.length === 0) delete settings.hooks[event];
+    removed = true;
   }
-  for (const target of [hookDest, commandDest]) {
+  if (!removed) log('  no hook registration found');
+  else writeSettings(settings, 'unregistered hooks in settings.json');
+  for (const target of [hookDest, stopHookDest, commandDest]) {
     if (!fs.existsSync(target)) continue;
     if (dryRun) log('  would delete ' + target);
     else { fs.unlinkSync(target); log('  deleted     ' + target); }
