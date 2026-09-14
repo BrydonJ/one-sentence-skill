@@ -43,7 +43,7 @@ git pull
 node install.js   # re-run: overwrites skill/hook files in place, hook registration stays de-duped
 ```
 
-Restart Claude Code afterwards. `install.js` is idempotent — safe to re-run any time to pick up the latest `SKILL.md` and hooks without creating duplicate hook entries.
+No restart needed. `install.js` is idempotent — safe to re-run any time to pick up the latest `SKILL.md` and hooks without creating duplicate hook entries.
 
 ## Use
 
