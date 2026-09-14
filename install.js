@@ -128,8 +128,10 @@ function doInstall() {
   writeSettings(settings, 'registered  UserPromptSubmit, PostToolUse and Stop hooks in settings.json');
 
   log('');
-  log('Done. Type /one-sentence. Claude Code picks up a settings.json hook change');
-  log('without a restart, so an already-open session works too.');
+  log('Done. The hooks are live already — hook registration is read from');
+  log('settings.json per invocation. The skill and the /1s command are indexed');
+  log('when a session opens, so restart before typing /one-sentence the first');
+  log('time. Re-running this installer later needs no restart.');
 }
 
 function doUninstall() {

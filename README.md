@@ -20,10 +20,11 @@ A [Claude Code](https://claude.com/claude-code) skill, plus the three hooks that
 
 **"How do I install this?"** — steps stay a list, capped at 10 words each
 
-> After — Clone it and run the installer; no restart needed.
+> After — Clone it, run the installer, restart to register the skill.
 > 1. Clone the repo.
 > 2. Run `node install.js`.
-> 3. Confirm with `/hooks`.
+> 3. Restart Claude Code.
+> 4. Confirm with `/hooks`.
 
 ## Install
 
@@ -33,7 +34,9 @@ cd one-sentence-skill
 node install.js   # --dry-run to preview, --uninstall to remove
 ```
 
-Claude Code picks the hooks up without a restart. `node test/one-sentence-posttool.test.js` checks the cadence hook against a throwaway config dir.
+Restart Claude Code after a first install. The hooks start working immediately — hook registration is read from `settings.json` per invocation, not snapshotted at startup — but the skill and the `/1s` command are indexed when the session opens, so neither trigger resolves until you restart.
+
+`node test/one-sentence-posttool.test.js` checks the cadence hook against a throwaway config dir.
 
 ## Update
 
@@ -43,7 +46,7 @@ git pull
 node install.js   # re-run: overwrites skill/hook files in place, hook registration stays de-duped
 ```
 
-No restart needed. `install.js` is idempotent — safe to re-run any time to pick up the latest `SKILL.md` and hooks without creating duplicate hook entries.
+No restart needed here: the skill and command are already indexed, only their contents change, and the hooks are re-read on every invocation. `install.js` is idempotent — safe to re-run any time without creating duplicate hook entries.
 
 ## Use
 
