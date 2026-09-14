@@ -36,6 +36,16 @@ node install.js   # --dry-run to preview, --uninstall to remove
 
 Restart Claude Code afterwards — hooks load at startup.
 
+## Update
+
+```bash
+cd one-sentence-skill
+git pull
+node install.js   # re-run: overwrites skill/hook files in place, hook registration stays de-duped
+```
+
+Restart Claude Code afterwards. `install.js` is idempotent — safe to re-run any time to pick up the latest `SKILL.md` and hooks without creating duplicate hook entries.
+
 ## Use
 
 `/one-sentence` or `/1s` to start. `/1s off` or "normal mode" to stop.

@@ -7,9 +7,9 @@ description: "Holds every reply to one sentence — two only when the question g
 
 ## Invocation
 
-Trigger names: `/one-sentence` and `/1s` — treat them as identical.
+Trigger names: `/one-sentence`, `/1s`, `/one-sentence?`, and `/1s?` — treat all four as identical.
 
-If the user's message is ONLY the trigger (nothing else in it), do not treat it as a new question: take your own previous reply and compress *that* down to one sentence, then send just the compressed sentence. If the trigger is attached to an actual question or instruction, answer that question in one sentence instead.
+If the user's message is ONLY the trigger (nothing else in it) — including the `?` forms — do not treat it as a new question, and do not respond by describing, checking, or confirming the skill itself (no "skill is loaded", no "yes /1s exists"). Instead: take your own previous reply (the one that prompted the user to send the trigger) and compress *that* down to one sentence, then send just the compressed sentence. The `?` is not a question about the skill — it's the same bare-trigger condense command as the no-`?` form. If the trigger is attached to an actual question or instruction, answer that question in one sentence instead.
 
 To stop: `/1s off`, "stop one-sentence", or "normal mode".
 
