@@ -156,6 +156,18 @@ function clearExpandMarker(sessionId) {
   }
 }
 
+// The PostToolUse hook re-asserts the rule on a cadence counted in tool calls
+// per turn. That count only means anything if it starts at zero each turn, and
+// this is the only hook that knows where a turn begins.
+function resetToolCount(sessionId) {
+  try {
+    fs.mkdirSync(stateDir, { recursive: true });
+    fs.writeFileSync(path.join(stateDir, (sessionId || 'default') + '.tc'), '0', 'utf8');
+  } catch (e) {
+    // The PostToolUse hook degrades to a stale cadence, not to an error.
+  }
+}
+
 function matchesAny(patterns, text) {
   return patterns.some((re) => re.test(text));
 }
@@ -184,6 +196,8 @@ function handle(raw) {
     }
 
     if (state !== 'on') return;
+
+    resetToolCount(sessionId);
 
     // A bare trigger is a request to compress the PREVIOUS reply, not a new
     // question — without this the model answers the trigger itself.

@@ -6,9 +6,11 @@
 //   node install.js --dry-run    print what would change, touch nothing
 //
 // The skill folder alone cannot hold the style: SKILL.md is injected once, and
-// the model drifts back to paragraphs within a few turns. The UserPromptSubmit
-// hook is what makes it stick, and hooks live in settings.json rather than in
-// the skill folder — hence an installer instead of a `cp`.
+// the model drifts back to paragraphs within a few turns. Three hooks are what
+// make it stick — UserPromptSubmit to re-state the rule each turn, PostToolUse
+// to keep it near the final message during a long agentic run, Stop to gate
+// what slips through — and hooks live in settings.json rather than in the skill
+// folder, hence an installer instead of a `cp`.
 
 const fs = require('fs');
 const path = require('path');
@@ -30,6 +32,12 @@ const commandDest = path.join(claudeDir, 'commands', '1s.md');
 // still ends in a wall of text, because the reminder was injected thousands of
 // tokens earlier and lost to the task's own reporting instinct.
 const stopHookDest = path.join(claudeDir, 'hooks', 'one-sentence-stop.js');
+// The Stop hook can block an over-budget reply but cannot retract it, so a
+// caught violation renders the wall of text AND the rewrite under it. Measured
+// across 14 real sessions, 35% of turns in this mode hit that. This third hook
+// attacks the cause rather than the symptom: it re-asserts the rule between the
+// tool calls, so the rule is still close by when the final message is written.
+const postToolHookDest = path.join(claudeDir, 'hooks', 'one-sentence-posttool.js');
 const settingsPath = path.join(claudeDir, 'settings.json');
 
 // Forward slashes in the registered command on every platform: the hook string
@@ -37,6 +45,7 @@ const settingsPath = path.join(claudeDir, 'settings.json');
 // there, which is a reliable source of silently broken hook registrations.
 const hookCommand = 'node "' + hookDest.replace(/\\/g, '/') + '"';
 const stopHookCommand = 'node "' + stopHookDest.replace(/\\/g, '/') + '"';
+const postToolHookCommand = 'node "' + postToolHookDest.replace(/\\/g, '/') + '"';
 
 function log(msg) {
   process.stdout.write(msg + '\n');
@@ -78,7 +87,7 @@ function writeSettings(settings, what) {
 // re-run after a path change still recognises its own previous entry instead of
 // adding a second one that fires alongside the first.
 function isOurs(entry) {
-  return /one-sentence(?:-stop)?\.js/.test(JSON.stringify(entry));
+  return /one-sentence(?:-stop|-posttool)?\.js/.test(JSON.stringify(entry));
 }
 
 // Both events take the same shape, and registering them through one function
@@ -105,24 +114,29 @@ function doInstall() {
   copyFile(path.join(repoRoot, 'skills', 'one-sentence', 'SKILL.md'), path.join(skillDest, 'SKILL.md'));
   copyFile(path.join(repoRoot, 'hooks', 'one-sentence.js'), hookDest);
   copyFile(path.join(repoRoot, 'hooks', 'one-sentence-stop.js'), stopHookDest);
+  copyFile(path.join(repoRoot, 'hooks', 'one-sentence-posttool.js'), postToolHookDest);
   copyFile(path.join(repoRoot, 'commands', '1s.md'), commandDest);
 
   const settings = readSettings();
   const hooks = settings.hooks || (settings.hooks = {});
   register(hooks, 'UserPromptSubmit', hookCommand, 'one-sentence check...');
   register(hooks, 'Stop', stopHookCommand, 'one-sentence length check...');
-  writeSettings(settings, 'registered  UserPromptSubmit and Stop hooks in settings.json');
+  // No matcher, so it runs after every tool. The hook decides for itself when
+  // to speak; filtering by tool name here would only move that decision into
+  // settings.json where it cannot be tested.
+  register(hooks, 'PostToolUse', postToolHookCommand, 'one-sentence re-assert...');
+  writeSettings(settings, 'registered  UserPromptSubmit, PostToolUse and Stop hooks in settings.json');
 
   log('');
-  log('Done. Restart Claude Code — hooks are read at startup, so the hook will');
-  log('not fire in a session that was already open. Then type /one-sentence.');
+  log('Done. Type /one-sentence. Claude Code picks up a settings.json hook change');
+  log('without a restart, so an already-open session works too.');
 }
 
 function doUninstall() {
   log('Removing one-sentence hook from ' + claudeDir);
   const settings = readSettings();
   let removed = false;
-  for (const event of ['UserPromptSubmit', 'Stop']) {
+  for (const event of ['UserPromptSubmit', 'PostToolUse', 'Stop']) {
     const list = (settings.hooks && settings.hooks[event]) || [];
     const kept = list.filter((e) => !isOurs(e));
     if (kept.length === list.length) continue;
@@ -132,7 +146,7 @@ function doUninstall() {
   }
   if (!removed) log('  no hook registration found');
   else writeSettings(settings, 'unregistered hooks in settings.json');
-  for (const target of [hookDest, stopHookDest, commandDest]) {
+  for (const target of [hookDest, stopHookDest, postToolHookDest, commandDest]) {
     if (!fs.existsSync(target)) continue;
     if (dryRun) log('  would delete ' + target);
     else { fs.unlinkSync(target); log('  deleted     ' + target); }
