@@ -2,7 +2,7 @@
 
 One sentence per reply. Two only if you asked two things.
 
-A [Claude Code](https://claude.com/claude-code) skill, plus the hook that stops it drifting back to paragraphs by turn four.
+A [Claude Code](https://claude.com/claude-code) skill, plus the three hooks that stop it drifting back to paragraphs by turn four.
 
 ## Before / after
 
@@ -20,11 +20,10 @@ A [Claude Code](https://claude.com/claude-code) skill, plus the hook that stops 
 
 **"How do I install this?"** — steps stay a list, capped at 10 words each
 
-> After — Run the installer, then restart; hooks only load at startup.
+> After — Clone it and run the installer; no restart needed.
 > 1. Clone the repo.
 > 2. Run `node install.js`.
-> 3. Restart Claude Code.
-> 4. Confirm with `/hooks`.
+> 3. Confirm with `/hooks`.
 
 ## Install
 
@@ -34,7 +33,7 @@ cd one-sentence-skill
 node install.js   # --dry-run to preview, --uninstall to remove
 ```
 
-Restart Claude Code afterwards — hooks load at startup.
+Claude Code picks the hooks up without a restart. `node test/one-sentence-posttool.test.js` checks the cadence hook against a throwaway config dir.
 
 ## Update
 
@@ -62,7 +61,11 @@ Say "explain" or "in detail" for a full answer — it returns to one sentence ne
 
 `hooks/one-sentence.js` re-injects the rule on every prompt while the mode is on.
 
-`hooks/one-sentence-stop.js` is the gate. A reminder injected at prompt-submit still loses on the last message of a long agentic run, thousands of tokens and dozens of tool calls later, where the wrap-up instinct is strongest. The `Stop` hook reads the finished reply and sends it back once if the prose runs over — lists, code, and output do not count, and an explicit "explain" is exempt.
+`hooks/one-sentence-posttool.js` closes the distance. A reminder injected at prompt-submit still loses on the last message of a long agentic run, dozens of tool calls later, where the wrap-up instinct is strongest and nothing sits between the final tool result and the reply. This hook re-states a one-line version after the 3rd tool call of a turn and every 5th after that, for as long as the turn runs. Subagents share the parent's session id, so their calls are skipped — otherwise one 70-call agent would burn through every injection point and the hook would go quiet on exactly the turns it exists for.
+
+`hooks/one-sentence-stop.js` is the gate behind it. It reads the finished reply and sends it back once if the prose runs over — lists, code, and output do not count, and an explicit "explain" is exempt. Note that `Stop` cannot retract what already rendered: a block shows the long reply *and* the rewrite under it, which is why the PostToolUse hook exists to make blocks rare rather than to make them stricter.
+
+Measured across 14 real sessions before the PostToolUse hook: 52 of 149 replies in this mode (35%) were over budget on the first pass. `tools/one-sentence-measure.js` re-runs that count against your own transcripts.
 
 ## Rules it holds to
 
@@ -74,5 +77,7 @@ Say "explain" or "in detail" for a full answer — it returns to one sentence ne
 ## Notes
 
 Saying "one sentence" turns it on. Stacks with other `UserPromptSubmit` style hooks. Fails silent, always exits 0.
+
+The PostToolUse re-assert costs about 70 tokens each time it fires, so roughly 550 on a long turn — less than one blocked wall-of-text and its rewrite.
 
 MIT — see [LICENSE](LICENSE).
