@@ -122,6 +122,11 @@ function lastAssistantText(transcriptPath) {
 // Counts only prose. Code, output, tables, and lists are exempt by the skill's
 // own rules, and counting them would block exactly the replies that are shaped
 // correctly.
+//
+// Duplicated by hand in tools/one-sentence-measure.js, which has to score old
+// replies the same way this gate scored them live. The two have already drifted
+// once. If a third copy is ever needed, move this into hooks/lib/ and require
+// it from both instead of copying it again.
 function proseWordCount(text) {
   const withoutFences = text.replace(/```[\s\S]*?(?:```|$)/g, '');
   let words = 0;

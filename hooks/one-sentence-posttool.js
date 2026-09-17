@@ -1,11 +1,29 @@
 #!/usr/bin/env node
 // one-sentence — PostToolUse hook.
 //
-// Measured on 14 sessions of real transcripts: 52 of 149 replies made while the
-// mode was on (35%) came out over budget on the first pass. The Stop hook
-// caught them, but `decision: "block"` cannot retract a message that has
-// already rendered — so the user sees the wall of text, then the compressed
-// rewrite underneath it, and reads a working gate as drift.
+// CORRECTION, 2026-09-17: the "35% of replies fail on the first pass" figure
+// this hook was built on was a measurement artifact. tools/one-sentence-measure.js
+// counted any transcript line containing the Stop hook's reason string, and each
+// block is written three times over (attachment + meta user turn + system
+// record) — plus this repo's own hook source counted itself whenever a session
+// `cat`-ed the file.
+//
+// Re-measured with the fixed tool, bucketed by which hooks existed when each
+// session ran: first-pass blocks went 15.5% (84 turns, Stop hook only) to 14.2%
+// (190 turns, with this hook). That is inside the noise for buckets this size,
+// so this hook has NOT been shown to reduce the double render it was written
+// for. The reply left standing improved 2.4% to 1.1% over the same split, which
+// is 2 occurrences against 2 — also not a signal.
+//
+// It is kept for now because it is cheap (one short injection per five tool
+// calls) and the mechanism is sound, not because the numbers justify it. If the
+// next re-measure still shows no separation, delete it rather than defend it.
+//
+// The original reasoning, which still describes what it does:
+//
+// The Stop hook's `decision: "block"` cannot retract a message that has already
+// rendered — so the user sees the wall of text, then the compressed rewrite
+// underneath it, and reads a working gate as drift.
 //
 // The cause is distance. The UserPromptSubmit directive is injected at the top
 // of the turn; in an agentic run the final message is composed a dozen tool
