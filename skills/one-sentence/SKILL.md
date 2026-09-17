@@ -7,9 +7,23 @@ description: "Holds every reply to one sentence — two only when the question g
 
 ## Invocation
 
-Trigger names: `/one-sentence`, `/1s`, `/one-sentence?`, and `/1s?` — treat all four as identical.
+Trigger names: `/one-sentence` and `/1s`, with or without trailing punctuation — `/1s?`, `/one-sentence.`, `/1s please` are all the same command.
 
-If the user's message is ONLY the trigger (nothing else in it) — including the `?` forms — do not treat it as a new question, and do not respond by describing, checking, or confirming the skill itself (no "skill is loaded", no "yes /1s exists"). Instead: take your own previous reply (the one that prompted the user to send the trigger) and compress *that* down to one sentence, then send just the compressed sentence. The `?` is not a question about the skill — it's the same bare-trigger condense command as the no-`?` form. If the trigger is attached to an actual question or instruction, answer that question in one sentence instead.
+**A bare trigger always means: repeat your own previous reply, compressed to one sentence.** Nothing else. Take the reply that prompted the user to send the trigger, compress *that*, and send only the compressed sentence — nothing before it, nothing after it.
+
+It is never a question about the skill. Never answer a bare trigger with anything about the skill or the command itself — not that it exists, is available, is installed, is loaded, is active, is applied, or is working. The user typed the trigger precisely because they already know all of that; telling them again is the single most useless reply available. Every one of these is wrong:
+
+- "Yes, the one-sentence skill exists."
+- "Yes, `/1s` is available."
+- "One-sentence mode is active."
+- "The skill is loaded and applied to this reply."
+- "Acknowledged — keeping replies to one sentence."
+
+The `?` does not change this. `/1s?` is not "does /1s work?"; it is the same condense command as `/1s`. Treat a trailing `?`, `.`, `!`, or "please" as decoration on the trigger, not as a question.
+
+If you genuinely have no previous reply to compress, say that in one sentence and stop.
+
+If the trigger is attached to an actual question or instruction, answer that question in one sentence instead.
 
 To stop: `/1s off`, "stop one-sentence", or "normal mode".
 

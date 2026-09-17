@@ -42,8 +42,11 @@ const EXPAND_NOTICE =
   + 'Answer at the length the question deserves, then return to one sentence on the very next turn without being told.';
 
 const COMPRESS_NOTICE =
-  'The prompt is only the trigger, with no new question attached: do not treat it as a new request. '
-  + 'Take your own previous reply and compress it to one sentence, and send only that sentence.';
+  'The prompt is ONLY the trigger, with no new question attached: do not treat it as a new request, and do not answer it. '
+  + 'Take your own previous reply and compress it to one sentence, and send only that sentence — nothing before it, nothing after it. '
+  + 'Say NOTHING about the skill or the command itself: not that it exists, is available, is installed, is loaded, is active, or is working. '
+  + 'The user typed the trigger because they already know all of that, so a reply like "yes, /1s is available" or "one-sentence mode is on" is always wrong here. '
+  + 'If you have no previous reply to compress, say that in one sentence and stop.';
 
 // Slash forms. `/1s` is an alias the skill documents; the harness resolves
 // slash commands by skill name, so the hook is what actually makes it work.
@@ -200,8 +203,15 @@ function handle(raw) {
     resetToolCount(sessionId);
 
     // A bare trigger is a request to compress the PREVIOUS reply, not a new
-    // question — without this the model answers the trigger itself.
-    const bareTrigger = /^\/(?:one-sentence(?::one-sentence)?|1s)\s*$/.test(prompt);
+    // question — without this the model answers the trigger itself, and the
+    // answer it reaches for is a status report on the skill ("yes, /1s
+    // exists"), which is the one thing the user never wants back.
+    //
+    // Trailing punctuation and a trailing "please" still count as bare: `/1s?`
+    // is not a question about the skill, it is the same condense command, and
+    // an unmatched `?` form was reaching the model with no compress notice at
+    // all.
+    const bareTrigger = /^\/(?:one-sentence(?::one-sentence)?|1s)\s*(?:please\s*)?[?!.\s]*$/.test(prompt);
 
     const parts = [];
     if (matchesAny(EXPAND_PHRASES, prompt)) {
